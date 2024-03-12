@@ -1,4 +1,4 @@
-﻿namespace FEM2;
+﻿namespace VEL_Problem;
 public class Vector
 {
    private double[] vec;
