@@ -8,6 +8,7 @@ public class FiniteElement
 {
     public int[] Nodes { get; set; } = new int[4];
     public double Sigma { get; set; }
+    public int this[int i] { get => Nodes[i]; set => Nodes[i] = value; }
 }
 
 public class Grid
