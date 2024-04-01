@@ -28,7 +28,10 @@ public class Grid
     private int[] _zSteps;
     private double[] _zCoefs;
     private double[] _sigmas;
-    
+
+    public int NumR { get; init; }
+    public int NumZ { get; init; }
+
 
     public Grid(string spaceGridPath, string timeGridPath)
     {
@@ -116,6 +119,8 @@ public class Grid
         // Генерация сетки и глобальная нумерация узлов
         var rUniq = new double[_rSteps.Sum() + 1];
         var zUniq = new double[_zSteps.Sum() + 1];
+        NumR = rUniq.Length;
+        NumZ = zUniq.Length;
 
         rUniq[0] = _rPoints[0];
         int ridx = 1;
