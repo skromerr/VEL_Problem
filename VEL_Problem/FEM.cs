@@ -64,15 +64,15 @@ public class FEM
 
     public void PrepareStartConditions()
     {
-        // начальное условие
-        double U(PointRZ point, double time)
-            => point.R * time;
+        AssemblySLAE(0);
+        AccountFirstConditions();
 
-        // первый слой
-        for (int i = 0; i < layers[0].Length; i++)
-        {
-            layers[1][i] = U(grid.Nodes[i], grid.Time[0]);
-        }
+
+        slae.SetSLAE(globalVector, globalMatrix);
+        slae.CGM();
+
+        Vector.Copy(layers[1], layers[0]);
+        Vector.Copy(slae.solution, layers[1]);
     }
 
 
@@ -166,7 +166,7 @@ public class FEM
 
     private void AssemblySLAE(int itime)
     {
-        double t01 = grid.Time[itime] - grid.Time[itime - 1];
+        double t01 = itime > 0 ? grid.Time[itime] - grid.Time[itime - 1] : 1;
         double t02 = itime > 1 ? grid.Time[itime] - grid.Time[itime - 2] : 1;
         double t12 = itime > 1 ? grid.Time[itime - 1] - grid.Time[itime - 2] : 1;
 
@@ -195,10 +195,18 @@ public class FEM
 
     void AssemblyLocallVector(int ielem, int itime, double t01, double t02, double t12)
     {
+        double tok = 0;
+        if (itime == 0 && grid.Nodes[grid.Elements[ielem][1]].R < grid.R)
+            tok = 1.0;
+
+        var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
+        Basis.SetElem(elem);
 
         for (int i = 0; i < Basis.Size; i++)
         {
-            localVector[i] = 0;
+            double fFunc(PointRZ point)
+                    => Basis.GetPsi(i, point) * tok * point.R;
+            localVector[i] = Integration.Gauss2D(fFunc, elem);
         }
 
         Vector qj1 = new(6);
@@ -257,6 +265,7 @@ public class FEM
 
                 stiffnessMatrix[i, j] = stiffnessMatrix[j, i] = Integration.Gauss2D(stifFunc, elem);
 
+                massMatrix[i, j] = massMatrix[j, i] = Integration.Gauss2D(massFunc, elem);
             }
     }
 
