@@ -7,3 +7,15 @@
 3   4    2
 1.0 1.0  1.0
 5.0 6.0  7.0
+
+
+-----------------------------
+rStart rRazb
+r[1] r[2] ... r[rRazb]
+rSteps[0] ... rSteps[rRazb-1] // кол-во отрезков внутри больших отрезков, вфт???
+rCoef[0]  ... rCoef[rRazb - 1] // коэф разрядки
+zStazt zRazb
+z[1] z[2] ... z[zRazb]
+zSteps[0] ... zSteps[zRazb-1] // кол-во отрезков внутри больших отрезков, вфт???
+zCoef[0]  ... zCoef[zRazb - 1] // коэф разрядки
+sigma[0] ... sigma[zRazb - 1]
