@@ -282,14 +282,14 @@ public class FEM
 
         for (numR = 1; numR < grid.NumR; numR++)
         {
-            if (point.R < grid.Nodes[numR].R) break;
+            if (point.R <= grid.Nodes[numR].R) break;
         }
 
         if (numR == grid.NumR) return -1;
 
         for (numZ = 1; numZ < grid.NumZ; numZ++)
         {
-            if (point.Z > grid.Nodes[numZ * grid.NumR].Z) 
+            if (point.Z >= grid.Nodes[numZ * grid.NumR].Z) 
                 return (numZ - 1) * (grid.NumR - 1) + numR - 1;
         }
         return -1;
