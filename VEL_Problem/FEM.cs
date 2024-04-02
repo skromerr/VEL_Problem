@@ -19,7 +19,7 @@ public class FEM
 
     public FEM(Grid grid)
     {
-        grid = grid;
+        this.grid = grid;
 
         Basis = new BilinearBasis();
 
@@ -78,12 +78,14 @@ public class FEM
 
     public void AccountFirstConditions()
     {
-        foreach (var fc in firstConditions)
+        foreach (var fc in grid.Boundary)
         {
             globalMatrix.Di[fc.NodeNumber] = 1;
-            globalVector[fc.NodeNumber] = 0;
+            var value = fc.Value(grid.r0);
+            globalVector[fc.NodeNumber] = value;
             for (int i = globalMatrix.Ig[fc.NodeNumber]; i < globalMatrix.Ig[fc.NodeNumber + 1]; i++)
             {
+                globalVector[globalMatrix.Jg[i]] -= value * globalMatrix.Gg[i];
                 globalMatrix.Gg[i] = 0;
             }
             for (int i = fc.NodeNumber + 1; i < globalMatrix.Size; i++)
@@ -92,6 +94,7 @@ public class FEM
                 {
                     if (globalMatrix.Jg[j] == fc.NodeNumber)
                     {
+                        globalVector[i] -= value * globalMatrix.Gg[j];
                         globalMatrix.Gg[j] = 0;
                     }
                 }
@@ -209,8 +212,8 @@ public class FEM
             localVector[i] = Integration.Gauss2D(fFunc, elem);
         }
 
-        Vector qj1 = new(6);
-        Vector qj2 = new(6);
+        Vector qj1 = new(Basis.Size);
+        Vector qj2 = new(Basis.Size);
         if (itime == 1)
         {
             for (int i = 0; i < qj1.Length; i++)
@@ -272,16 +275,37 @@ public class FEM
 
    
 
-    private int FindElement(PointRZ point)
+    public int FindElement(PointRZ point)
     {
-        for (int ielem = 0; ielem < grid.Elements.Length; ielem++)
+        int numR, numZ;
+        if (point.R < grid.Nodes[0].R || point.Z > grid.Nodes[0].Z) return -1;
+
+        for (numR = 1; numR < grid.NumR; numR++)
         {
-            
+            if (point.R < grid.Nodes[numR].R) break;
+        }
+
+        if (numR == grid.NumR) return -1;
+
+        for (numZ = 1; numZ < grid.NumZ; numZ++)
+        {
+            if (point.Z > grid.Nodes[numZ * grid.NumR].Z) 
+                return (numZ - 1) * (grid.NumR - 1) + numR - 1;
         }
         return -1;
     }
 
+    public double ValueAtPoint(PointRZ point)
+    {
+        double res = 0;
+        int ielem = FindElement(point);
+        var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
+        Basis.SetElem(elem);
 
+        for (int i = 0; i < Basis.Size; i++)
+            res += layers[1][grid.Elements[ielem][i]] * Basis.GetPsi(i, point);
+        return res;
+    }
 
     public void PrintSolution()
     {
