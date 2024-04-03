@@ -13,11 +13,11 @@ public class FirstCondition
         Type = type;
     }
 
-    public double Value(double r0)
+    public double Value(double r, double cur = 1.0)
         => Type switch
         {
             0 => 0.0,
-            _ => 1.0 / (2.0 * Math.PI * r0)
+            _ => cur / (2.0 * Math.PI * r)
         };
 }
 

@@ -32,6 +32,9 @@ public class Grid
     public int NumR { get; init; }
     public int NumZ { get; init; }
 
+    private double current;
+    public double Current { get => current; }
+
 
     public Grid(string spaceGridPath, string timeGridPath)
     {
@@ -41,6 +44,10 @@ public class Grid
         // чтение данных из файла сетки
         using (StreamReader sr = new(spaceGridPath))
         {
+            data = sr.ReadLine()!.Split(" ").Where(str => str != "").ToArray();
+            current = Convert.ToDouble(data[0]);
+
+
             data = sr.ReadLine()!.Split(" ").Where(str => str != "").ToArray();
             rSplits = Convert.ToInt32(data[1]);
 
