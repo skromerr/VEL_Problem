@@ -71,7 +71,7 @@ public class FEM
         for (int itime = 1; itime < grid.Time.Length; itime++)
         {
             AssemblySLAE(itime);
-            AccountFirstConditions();
+            AccountZeroFirstConditions();
 
 
             slae.SetSLAE(globalVector, globalMatrix);
@@ -107,6 +107,32 @@ public class FEM
         {
             globalMatrix.Di[fc.NodeNumber] = 1;
             var value = fc.Value(grid.r0);
+            globalVector[fc.NodeNumber] = value;
+            for (int i = globalMatrix.Ig[fc.NodeNumber]; i < globalMatrix.Ig[fc.NodeNumber + 1]; i++)
+            {
+                globalVector[globalMatrix.Jg[i]] -= value * globalMatrix.Gg[i];
+                globalMatrix.Gg[i] = 0;
+            }
+            for (int i = fc.NodeNumber + 1; i < globalMatrix.Size; i++)
+            {
+                for (int j = globalMatrix.Ig[i]; j < globalMatrix.Ig[i + 1]; j++)
+                {
+                    if (globalMatrix.Jg[j] == fc.NodeNumber)
+                    {
+                        globalVector[i] -= value * globalMatrix.Gg[j];
+                        globalMatrix.Gg[j] = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    public void AccountZeroFirstConditions()
+    {
+        foreach (var fc in grid.Boundary)
+        {
+            globalMatrix.Di[fc.NodeNumber] = 1;
+            var value = 0;
             globalVector[fc.NodeNumber] = value;
             for (int i = globalMatrix.Ig[fc.NodeNumber]; i < globalMatrix.Ig[fc.NodeNumber + 1]; i++)
             {
