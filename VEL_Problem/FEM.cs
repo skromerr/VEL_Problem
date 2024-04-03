@@ -250,7 +250,7 @@ public class FEM
                     qj1[i] += massApproxMatrix[i, j] * layers[1][grid.Elements[ielem].Nodes[j]];
             }
 
-            localVector += 1.0 / t01 * grid.Elements[ielem].Sigma * qj1;
+            localVector += 1.0 / t01 * mu * qj1;
         }
         else if (itime > 1)
         {
@@ -264,7 +264,7 @@ public class FEM
                 }
             }
 
-            localVector += t02 / (t12 * t01) * grid.Elements[ielem].Sigma * qj1 - t01 / (t02 * t12) * grid.Elements[ielem].Sigma * qj2;
+            localVector += t02 / (t12 * t01) * mu * qj1 - t01 / (t02 * t12) * mu * qj2;
         }
 
     }
