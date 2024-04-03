@@ -5,6 +5,7 @@ namespace VEL_Problem;
 
 public class FEM
 {
+    private const double mu = 4.0 * Math.PI * 1E-07;
     private Grid grid;
     private SparseMatrix globalMatrix;
     private Vector globalVector;
@@ -12,10 +13,11 @@ public class FEM
     private Vector localVector;
     private Matrix stiffnessMatrix;
     private Matrix massMatrix;
+    private Matrix massApproxMatrix;
     private Vector[] layers;
-    private FirstCondition[] firstConditions;
     private IBasis2D Basis;
     (int maxIters, double eps) slaeParametres = (10000, 1e-14);
+    private List<PointRZ> receivers;
 
     public FEM(Grid grid)
     {
@@ -26,17 +28,36 @@ public class FEM
 
         stiffnessMatrix = new(Basis.Size);
         massMatrix = new(Basis.Size);
+        massApproxMatrix = new(Basis.Size);
         localVector = new(Basis.Size);
         slae = new Solver(slaeParametres.maxIters, slaeParametres.eps);
 
 
         layers = new Vector[2].Select(_ => new Vector(grid.Nodes.Count)).ToArray();
+
+        receivers = new List<PointRZ>();
     }
 
     public void SetSlaeParametres(int maxiters, double eps)
     {
         slaeParametres = (maxiters, eps);
         slae.SetParametres(maxiters, eps);
+    }
+
+    public void SetReceivers(string path)
+    {
+        using StreamReader sr = new(path);
+
+        string[] data;
+
+        data = sr.ReadLine().Split(" ").ToArray();
+        int numRec = Convert.ToInt32(data[0]);
+
+        for (int i = 0; i < numRec; i++)
+        {
+            data = sr.ReadLine().Split(" ").Where(str => str != "").ToArray();
+            receivers.Add(new(Convert.ToDouble(data[0]), Convert.ToDouble(data[1])));
+        }
     }
 
     public void Compute()
@@ -58,6 +79,8 @@ public class FEM
 
             Vector.Copy(layers[1], layers[0]);
             Vector.Copy(slae.solution, layers[1]);
+
+            PrintValueAtReceivers(itime);
         }
 
     }
@@ -73,6 +96,8 @@ public class FEM
 
         Vector.Copy(layers[1], layers[0]);
         Vector.Copy(slae.solution, layers[1]);
+
+        PrintValueAtReceivers(0, false);
     }
 
 
@@ -104,7 +129,7 @@ public class FEM
 
     public void AccountFirstConditionsWithBigNumber()
     {
-        foreach (var fc in firstConditions)
+        foreach (var fc in grid.Boundary)
         {
             globalMatrix.Di[fc.NodeNumber] = 1e30;
             globalVector[fc.NodeNumber] = 1e30 * fc.Value(grid.r0);
@@ -181,6 +206,10 @@ public class FEM
             AssemblyLocalMatrixes(ielem);
 
             stiffnessMatrix = 1 / (grid.Elements[ielem].Sigma) * stiffnessMatrix;
+            massMatrix = 1 / (grid.Elements[ielem].Sigma) * massMatrix;
+            massApproxMatrix = mu * (itime > 0 ? 1.0 / t01 + (itime > 1 ? 1.0 / t02 : 0) : 0) * massApproxMatrix;
+
+            stiffnessMatrix += massMatrix + massApproxMatrix;
 
             for (int i = 0; i < Basis.Size; i++)
                 for (int j = 0; j < Basis.Size; j++)
@@ -193,13 +222,12 @@ public class FEM
             stiffnessMatrix.Clear();
             localVector.Fill(0);
         }
-        //globalVector = mu0 * globalVector;
     }
 
     void AssemblyLocallVector(int ielem, int itime, double t01, double t02, double t12)
     {
         double tok = 0;
-        if (itime == 0 && grid.Nodes[grid.Elements[ielem][1]].R < grid.R)
+        if (itime == 0 && grid.Nodes[grid.Elements[ielem][1]].R < grid.VELRadius)
             tok = 1.0;
 
         var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
@@ -219,24 +247,24 @@ public class FEM
             for (int i = 0; i < qj1.Length; i++)
             {
                 for (int j = 0; j < qj1.Length; j++)
-                    qj1[i] += massMatrix[i, j] * layers[1][grid.Elements[ielem].Nodes[j]];
+                    qj1[i] += massApproxMatrix[i, j] * layers[1][grid.Elements[ielem].Nodes[j]];
             }
 
-            localVector += 1.0 / t01 * qj1;
+            localVector += 1.0 / t01 * grid.Elements[ielem].Sigma * qj1;
         }
-        else
+        else if (itime > 1)
         {
             for (int i = 0; i < qj1.Length; i++)
             {
                 for (int j = 0; j < qj1.Length; j++)
                 {
-                    qj2[i] += massMatrix[i, j] * layers[0][grid.Elements[ielem].Nodes[j]];
+                    qj2[i] += massApproxMatrix[i, j] * layers[0][grid.Elements[ielem].Nodes[j]];
 
-                    qj1[i] += massMatrix[i, j] * layers[1][grid.Elements[ielem].Nodes[j]];
+                    qj1[i] += massApproxMatrix[i, j] * layers[1][grid.Elements[ielem].Nodes[j]];
                 }
             }
 
-            localVector += t02 / (t12 * t01) * qj1 - t01 / (t02 * t12) * qj2;
+            localVector += t02 / (t12 * t01) * grid.Elements[ielem].Sigma * qj1 - t01 / (t02 * t12) * grid.Elements[ielem].Sigma * qj2;
         }
 
     }
@@ -264,17 +292,19 @@ public class FEM
                     Basis.GetDPsi(i, VarType.Z, point) * Basis.GetDPsi(j, VarType.Z, point) * point.R);
 
                 double massFunc(PointRZ point)
+                    => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) / point.R;
+
+                double massApproxFunc(PointRZ point)
                     => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) * point.R;
 
                 stiffnessMatrix[i, j] = stiffnessMatrix[j, i] = Integration.Gauss2D(stifFunc, elem);
 
                 massMatrix[i, j] = massMatrix[j, i] = Integration.Gauss2D(massFunc, elem);
+
+                massApproxMatrix[i, j] = massApproxMatrix[j, i] = Integration.Gauss2D(massApproxFunc, elem);
             }
     }
-
-
-   
-
+    
     public int FindElement(PointRZ point)
     {
         int numR, numZ;
@@ -299,12 +329,24 @@ public class FEM
     {
         double res = 0;
         int ielem = FindElement(point);
+        if (ielem == -1) return 0;
         var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
         Basis.SetElem(elem);
 
         for (int i = 0; i < Basis.Size; i++)
             res += layers[1][grid.Elements[ielem][i]] * Basis.GetPsi(i, point);
         return res;
+    }
+
+    private void PrintValueAtReceivers(int itime, bool append = true)
+    {
+        using StreamWriter sw = new("..\\..\\..\\ReceiversResults.txt", append);
+        sw.Write($"{grid.Time[itime]:F4}");
+        for (int i = 0; i < receivers.Count; i++)
+            sw.Write($" {ValueAtPoint(receivers[i]):E7}");
+        sw.WriteLine();
+
+        sw.Close();
     }
 
     public void PrintSolution()
@@ -314,10 +356,5 @@ public class FEM
             Console.WriteLine($"x = {grid.Nodes[i].R:e3}, y = {grid.Nodes[i].Z:e3}, Hphi = {layers[1][i]}");
         }
     }
-
-    public static Func<PointRZ, double> Mult(Func<PointRZ, double> fst, Func<PointRZ, double> scnd)
-        => (point) => fst(point) * scnd(point);
-    public static Func<PointRZ, double> Sum(Func<PointRZ, double> fst, Func<PointRZ, double> scnd)
-        => (point) => fst(point) + scnd(point);
 }
 

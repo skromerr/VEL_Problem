@@ -16,7 +16,7 @@ public class Grid
     public List<PointRZ> Nodes { get; init; }
     public List<FirstCondition> Boundary { get; init; }
     public FiniteElement[] Elements { get; init; }
-    public double R { get => _rPoints is null ? 0.001 : _rPoints[1]; }
+    public double VELRadius { get => _rPoints is null ? 0.001 : _rPoints[1]; }
     public double r0 { get => _rPoints is null ? 0.001 : _rPoints[0]; }
     public double[] Time { get; init; }
 
@@ -105,12 +105,12 @@ public class Grid
         {
             data = sr.ReadLine().Split(" ").ToArray();
             var steps = Convert.ToInt32(data[1]);
-            Time = new double[steps];
+            Time = new double[steps + 1];
             Time[0] = Convert.ToDouble(data[0]);
             Time[^1] = Convert.ToDouble(data[2]);
             var step = (Time[^1] - Time[0]) / steps;
 
-            for (int i = 1; i < steps - 1; i++)
+            for (int i = 1; i < steps; i++)
             {
                 Time[i] = Time[0] + step * i;
             }

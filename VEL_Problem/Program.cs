@@ -5,7 +5,10 @@ Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-U
 
 string gridPath = "..\\..\\..\\grid.txt";
 string timePath = "..\\..\\..\\time.txt";
+string receiversPath = "..\\..\\..\\receivers.txt";
 
 Grid grid = new(gridPath, timePath);
 FEM fem = new(grid);
+fem.SetReceivers(receiversPath);
 fem.Compute();
+Console.WriteLine(fem.FindElement(new(6, -7)));
