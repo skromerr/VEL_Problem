@@ -81,6 +81,7 @@ public class FEM
             Vector.Copy(slae.solution, layers[1]);
 
             PrintValueAtReceivers(itime);
+            CheckResult(itime);
         }
 
     }
@@ -226,18 +227,9 @@ public class FEM
 
     void AssemblyLocallVector(int ielem, int itime, double t01, double t02, double t12)
     {
-        double tok = 0;
-        if (itime == 0 && grid.Nodes[grid.Elements[ielem][1]].R < grid.VELRadius)
-            tok = 1.0;
-
-        var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
-        Basis.SetElem(elem);
-
         for (int i = 0; i < Basis.Size; i++)
         {
-            double fFunc(PointRZ point)
-                    => Basis.GetPsi(i, point) * tok * point.R;
-            localVector[i] = Integration.Gauss2D(fFunc, elem);
+            localVector[i] = 0;
         }
 
         Vector qj1 = new(Basis.Size);
@@ -338,10 +330,25 @@ public class FEM
         return res;
     }
 
+    public double ValueAtPointAtPreviousLayer(PointRZ point)
+    {
+        {
+            double res = 0;
+            int ielem = FindElement(point);
+            if (ielem == -1) return 0;
+            var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
+            Basis.SetElem(elem);
+
+            for (int i = 0; i < Basis.Size; i++)
+                res += layers[0][grid.Elements[ielem][i]] * Basis.GetPsi(i, point);
+            return res;
+        }
+    }
+
     private void PrintValueAtReceivers(int itime, bool append = true)
     {
         using StreamWriter sw = new("..\\..\\..\\ReceiversResults.txt", append);
-        sw.Write($"{grid.Time[itime]:F4}");
+        sw.Write($"{grid.Time[itime]:E4}");
         for (int i = 0; i < receivers.Count; i++)
             sw.Write($" {ValueAtPoint(receivers[i]):E7}");
         sw.WriteLine();
@@ -355,6 +362,63 @@ public class FEM
         {
             Console.WriteLine($"x = {grid.Nodes[i].R:e3}, y = {grid.Nodes[i].Z:e3}, Hphi = {layers[1][i]}");
         }
+    }
+
+    private double rotE(PointRZ point)
+    {
+        int ielem = FindElement(point);
+        double sigma = grid.Elements[ielem].Sigma;
+
+        double res;
+        double dPhiDz(PointRZ point) => Derivative(ValueAtPoint, point, 1);
+        double dPhiDr(PointRZ point) => Derivative(ValueAtPoint, point, 0);
+
+        res = Derivative(dPhiDz, point, 1) + Derivative(dPhiDr, point, 0) + 1 / point.R * dPhiDr(point) - ValueAtPoint(point) / (point.R * point.R);
+        return res / sigma;
+    }
+
+    private double minusdBdT(PointRZ point, int itime)
+    {
+        double res;
+
+        res = TimeDerivative(point, itime);
+
+        return -mu * res;
+    }
+
+    private double Derivative(Func<PointRZ, double> func, PointRZ point, int varType)
+    {
+        double res;
+        double h = 1e-7;
+        switch (varType)
+        {
+            case 0:
+                res = (func(point + (Math.Abs(point.R) * h, 0)) - func(point)) / (Math.Abs(point.R) * h);
+                break;
+            default:
+                res = (func(point + (0, Math.Abs(point.Z) * h)) - func(point)) / (Math.Abs(point.Z) * h);
+                break;
+        }
+
+        return res;
+    }
+
+    private double TimeDerivative(PointRZ point, int itime)
+    {
+        double res;
+
+        res = ValueAtPoint(point) - ValueAtPointAtPreviousLayer(point);
+        res /= (grid.Time[itime] - grid.Time[itime - 1]);
+
+        return res;
+    }
+
+    private void CheckResult(int itime)
+    {
+        if (receivers.Count > 0)
+            Console.WriteLine($"t = {grid.Time[itime]:E3}:   " +
+                $"rotE_phi = {rotE(receivers[0]):E7};      " +
+                $"-dB/dt = {minusdBdT(receivers[0], itime):E7}");
     }
 }
 

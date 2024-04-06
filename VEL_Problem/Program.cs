@@ -11,4 +11,3 @@ Grid grid = new(gridPath, timePath);
 FEM fem = new(grid);
 fem.SetReceivers(receiversPath);
 fem.Compute();
-Console.WriteLine(fem.FindElement(new(6, -7)));

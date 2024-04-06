@@ -1,4 +1,4 @@
-﻿0.0 20 1e-2
+﻿0.0 50 1e-4
 
 --------------
 timeStart timeSteps timeEnd

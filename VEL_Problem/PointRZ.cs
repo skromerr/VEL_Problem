@@ -3,8 +3,10 @@
 public record struct PointRZ(double R = 0, double Z = 0)
 {
     public static PointRZ operator +(PointRZ a, PointRZ b) => new(a.R + b.R, a.Z + b.Z);
+    public static PointRZ operator +(PointRZ a, (double R, double Z) b) => new(a.R + b.R, a.Z + b.Z);
 
     public static PointRZ operator -(PointRZ a, PointRZ b) => new(a.R - b.R, a.Z - b.Z);
+    public static PointRZ operator -(PointRZ a, (double R, double Z) b) => new(a.R - b.R, a.Z - b.Z);
 
     public static PointRZ operator *(double coef, PointRZ a) => new(coef * a.R, coef * a.Z);
 
