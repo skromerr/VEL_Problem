@@ -173,6 +173,7 @@ public class Grid
             zUniq[zidx++] = _zPoints[i + 1];
         }
 
+
         Nodes = new List<PointRZ>();
 
         for (int i = 0; i < zUniq.Length; i++)
@@ -189,13 +190,13 @@ public class Grid
         {
             for (int j = 0; j < _zSteps[i]; j++)
             {
-                for (int k = 0; k < rUniq.Length - 1; k++)
+                for (int rIdx = 0; rIdx < rUniq.Length - 1; rIdx++)
                 {
                     Elements[elidx] = new();
-                    Elements[elidx].Nodes[0] = (zidx + 1) * rUniq.Length + k;
-                    Elements[elidx].Nodes[1] = (zidx + 1) * rUniq.Length + k + 1;
-                    Elements[elidx].Nodes[2] = zidx * rUniq.Length + k;
-                    Elements[elidx].Nodes[3] = zidx * rUniq.Length + k + 1;
+                    Elements[elidx].Nodes[0] = (zidx + 1) * rUniq.Length + rIdx;
+                    Elements[elidx].Nodes[1] = (zidx + 1) * rUniq.Length + rIdx + 1;
+                    Elements[elidx].Nodes[2] = zidx * rUniq.Length + rIdx;
+                    Elements[elidx].Nodes[3] = zidx * rUniq.Length + rIdx + 1;
                     Elements[elidx].Sigma = _sigmas[i];
                     elidx++;
                 }
@@ -211,16 +212,18 @@ public class Grid
             Boundary.Add(new FirstCondition(Nodes[Nodes.Count - i], Nodes.Count - i, 0));
 
         // боковые границы
-        for (int i = 0; i < zUniq.Length; i++)
+        for (int i = 1; i < zUniq.Length - 1; i++)
         {
             Boundary.Add(new FirstCondition(Nodes[rUniq.Length * i], rUniq.Length * i, 0));
             Boundary.Add(new FirstCondition(Nodes[rUniq.Length * (i + 1) - 1], rUniq.Length * (i + 1) - 1, 0));
         }
 
         // верхняя граница
-        for (int i = _rSteps[0]; i < rUniq.Length; i++)
+        for (int i = _rSteps[0] + 1; i < rUniq.Length; i++)
             Boundary.Add(new FirstCondition(Nodes[i], i, 0));
-        for (int i = 0; i < _rSteps[0]; i++)
+        for (int i = 0; i <= _rSteps[0]; i++)
+        {
             Boundary.Add(new FirstCondition(Nodes[i], i, 1));
+        }
     }
 }
