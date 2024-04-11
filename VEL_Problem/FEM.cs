@@ -370,11 +370,11 @@ public class FEM
         double sigma = grid.Elements[ielem].Sigma;
 
         double res;
-        double dPhiDz(PointRZ point) => Derivative(ValueAtPoint, point, 1);
-        double dPhiDr(PointRZ point) => Derivative(ValueAtPoint, point, 0);
+        //double dPhiDz(PointRZ point) => Derivative(ValueAtPoint, point, 1);
+        //double dPhiDr(PointRZ point) => Derivative(ValueAtPoint, point, 0);
 
-        res = Derivative(dPhiDz, point, 1) + Derivative(dPhiDr, point, 0) + 1 / point.R * dPhiDr(point) - ValueAtPoint(point) / (point.R * point.R);
-        return res / sigma;
+        res = SecondDerivative(ValueAtPoint, point, 1) + SecondDerivative(ValueAtPoint, point, 0) + Derivative(ValueAtPoint, point, 0) / point.R - ValueAtPoint(point) / (point.R * point.R);
+        return - res / sigma;
     }
 
     private double minusdBdT(PointRZ point, int itime)
@@ -386,7 +386,7 @@ public class FEM
         return -mu * res;
     }
 
-    private double Derivative(Func<PointRZ, double> func, PointRZ point, int varType)
+    public static double Derivative(Func<PointRZ, double> func, PointRZ point, int varType)
     {
         double res;
         double h = 1e-7;
@@ -397,6 +397,23 @@ public class FEM
                 break;
             default:
                 res = (func(point + (0, Math.Abs(point.Z) * h)) - func(point)) / (Math.Abs(point.Z) * h);
+                break;
+        }
+
+        return res;
+    }
+
+    public static double SecondDerivative(Func<PointRZ, double> func, PointRZ point, int varType)
+    {
+        double res;
+        double h = 1e-7;
+        switch (varType)
+        {
+            case 0:
+                res = (func(point + (Math.Abs(point.R) * h, 0)) - 2 * func(point) + func(point - (Math.Abs(point.R) * h, 0))) / (Math.Abs(point.R) * h * Math.Abs(point.R) * h);
+                break;
+            default:
+                res = (func(point + (0, Math.Abs(point.Z) * h)) - 2 * func(point) + func(point - (0, Math.Abs(point.Z) * h))) / (Math.Abs(point.Z) * h * Math.Abs(point.Z) * h);
                 break;
         }
 
@@ -415,10 +432,10 @@ public class FEM
 
     private void CheckResult(int itime)
     {
-        if (receivers.Count > 0)
+        for (int i = 0; i < receivers.Count; i++)
             Console.WriteLine($"t = {grid.Time[itime]:E3}:   " +
-                $"rotE_phi = {rotE(receivers[0]):E7};      " +
-                $"-dB/dt = {minusdBdT(receivers[0], itime):E7}");
+                $"rotE_phi = {rotE(receivers[i]):E7};      " +
+                $"-dB/dt = {minusdBdT(receivers[i], itime):E7}");
     }
 }
 
