@@ -193,10 +193,10 @@ public class Grid
                 for (int rIdx = 0; rIdx < rUniq.Length - 1; rIdx++)
                 {
                     Elements[elidx] = new();
-                    Elements[elidx].Nodes[0] = (zidx + 1) * rUniq.Length + rIdx;
-                    Elements[elidx].Nodes[1] = (zidx + 1) * rUniq.Length + rIdx + 1;
-                    Elements[elidx].Nodes[2] = zidx * rUniq.Length + rIdx;
-                    Elements[elidx].Nodes[3] = zidx * rUniq.Length + rIdx + 1;
+                    Elements[elidx].Nodes[0] = zidx * rUniq.Length + rIdx;
+                    Elements[elidx].Nodes[1] = zidx * rUniq.Length + rIdx + 1;
+                    Elements[elidx].Nodes[2] = (zidx + 1) * rUniq.Length + rIdx;
+                    Elements[elidx].Nodes[3] = (zidx + 1) * rUniq.Length + rIdx + 1;
                     Elements[elidx].Sigma = _sigmas[i];
                     elidx++;
                 }
@@ -208,20 +208,20 @@ public class Grid
         Boundary = new List<FirstCondition>();
 
         // нижняя граница
-        for (int i = 1; i <= rUniq.Length; i++)
-            Boundary.Add(new FirstCondition(Nodes[Nodes.Count - i], Nodes.Count - i, 0));
+        for (int i = 0; i < rUniq.Length; i++)
+            Boundary.Add(new FirstCondition(Nodes[i], i, 0));
 
         // боковые границы
         for (int i = 1; i < zUniq.Length - 1; i++)
         {
-            Boundary.Add(new FirstCondition(Nodes[rUniq.Length * i], rUniq.Length * i, 0));
-            Boundary.Add(new FirstCondition(Nodes[rUniq.Length * (i + 1) - 1], rUniq.Length * (i + 1) - 1, 0));
+            Boundary.Add(new FirstCondition(Nodes[rUniq.Length * i], rUniq.Length * i, 0));                      // левая
+            Boundary.Add(new FirstCondition(Nodes[rUniq.Length * (i + 1) - 1], rUniq.Length * (i + 1) - 1, 0));  // правая
         }
 
         // верхняя граница
-        for (int i = _rSteps[0] + 1; i < rUniq.Length; i++)
+        for (int i = Nodes.Count - rUniq.Length + _rSteps[0] + 1; i < Nodes.Count; i++)
             Boundary.Add(new FirstCondition(Nodes[i], i, 0));
-        for (int i = 0; i <= _rSteps[0]; i++)
+        for (int i = Nodes.Count - rUniq.Length; i <= Nodes.Count - rUniq.Length + _rSteps[0]; i++)
         {
             Boundary.Add(new FirstCondition(Nodes[i], i, 1));
         }
