@@ -281,7 +281,7 @@ public class FEM
             {
                 double stifFunc(PointRZ point)
                     => (Basis.GetDPsi(i, VarType.R, point) * Basis.GetDPsi(j, VarType.R, point) +
-                    Basis.GetDPsi(i, VarType.Z, point) * Basis.GetDPsi(j, VarType.Z, point) * point.R);
+                    Basis.GetDPsi(i, VarType.Z, point) * Basis.GetDPsi(j, VarType.Z, point)) * point.R;
 
                 double massFunc(PointRZ point)
                     => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) / point.R;
