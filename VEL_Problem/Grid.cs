@@ -212,7 +212,7 @@ public class Grid
             Boundary.Add(new FirstCondition(Nodes[i], i, 0));
 
         // боковые границы
-        for (int i = 1; i < zUniq.Length - 1; i++)
+        for (int i = 1; i < zUniq.Length; i++)
         {
             Boundary.Add(new FirstCondition(Nodes[rUniq.Length * i], rUniq.Length * i, 0));                      // левая
             Boundary.Add(new FirstCondition(Nodes[rUniq.Length * (i + 1) - 1], rUniq.Length * (i + 1) - 1, 0));  // правая
@@ -221,7 +221,8 @@ public class Grid
         // верхняя граница
         for (int i = Nodes.Count - rUniq.Length + _rSteps[0] + 1; i < Nodes.Count; i++)
             Boundary.Add(new FirstCondition(Nodes[i], i, 0));
-        for (int i = Nodes.Count - rUniq.Length; i <= Nodes.Count - rUniq.Length + _rSteps[0]; i++)
+
+        for (int i = Nodes.Count - rUniq.Length + 1; i <= Nodes.Count - rUniq.Length + _rSteps[0]; i++)
         {
             Boundary.Add(new FirstCondition(Nodes[i], i, 1));
         }

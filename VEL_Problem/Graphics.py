@@ -10,14 +10,14 @@ with open("results.txt") as file:
         y.append(float(yT))
         Az.append(float(AzT))
 
-with open("kek.txt") as file:
-    for line in file:
-        u.append(float(line))
+#with open("kek.txt") as file:
+#    for line in file:
+#        u.append(float(line))
 
 x = list(dict.fromkeys(x))
 y = list(dict.fromkeys(y))
 
-levels = np.linspace(min(u), max(u), 8)
+levels = np.linspace(min(Az), max(Az), 8)
 
 
 
@@ -25,7 +25,7 @@ levels = np.linspace(min(u), max(u), 8)
 fig, ax = plt.subplots()
 
 X, Y = np.meshgrid(x, y)
-u = np.reshape(u, (len(y), len(x)))
-colorBar = plt.contourf(X, Y, u, levels=100, cmap='jet')
+Az = np.reshape(Az, (len(y), len(x)))
+colorBar = plt.contourf(X, Y, Az, levels=100, cmap='jet')
 plt.colorbar(colorBar, ax=ax, format='%.0e')
 plt.show()
