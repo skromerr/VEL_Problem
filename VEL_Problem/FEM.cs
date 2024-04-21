@@ -38,6 +38,12 @@ public class FEM
         receivers = new List<PointRZ>();
     }
 
+    private double u(PointRZ point, double time = 0)
+        => point.R * point.R * point.Z;
+
+    private double f(PointRZ point, double time = 0)
+        => -4 * point.Z;
+
     public void SetSlaeParametres(int maxiters, double eps)
     {
         slaeParametres = (maxiters, eps);
@@ -68,21 +74,21 @@ public class FEM
 
 
 
-        for (int itime = 1; itime < grid.Time.Length; itime++)
-        {
-            AssemblySLAE(itime);
-            AccountFirstConditions();
+        //for (int itime = 1; itime < grid.Time.Length; itime++)
+        //{
+        //    AssemblySLAE(itime);
+        //    AccountFirstConditions();
 
 
-            slae.SetSLAE(globalVector, globalMatrix);
-            slae.CGM();
+        //    slae.SetSLAE(globalVector, globalMatrix);
+        //    slae.CGM();
 
-            Vector.Copy(layers[1], layers[0]);
-            Vector.Copy(slae.solution, layers[1]);
+        //    Vector.Copy(layers[1], layers[0]);
+        //    Vector.Copy(slae.solution, layers[1]);
 
-            PrintValueAtReceivers(itime);
-            CheckResult(itime);
-        }
+        //    PrintValueAtReceivers(itime);
+        //    CheckResult(itime);
+        //}
 
     }
 
@@ -99,15 +105,17 @@ public class FEM
         Vector.Copy(slae.solution, layers[1]);
 
         PrintValueAtReceivers(0, false);
+        PrintSol();
     }
 
 
-    public void AccountFirstConditions(double cur = 0)
+    public void AccountFirstConditions(double cur = 0, int itime = 0)
     {
         foreach (var fc in grid.Boundary)
         {
             globalMatrix.Di[fc.NodeNumber] = 1;
-            var value = fc.Value(fc.Point.R, cur);
+            //var value = fc.Value(fc.Point.R, cur);
+            var value = u(fc.Point, grid.Time[itime]);
             globalVector[fc.NodeNumber] = value;
             for (int i = globalMatrix.Ig[fc.NodeNumber]; i < globalMatrix.Ig[fc.NodeNumber + 1]; i++)
             {
@@ -210,7 +218,7 @@ public class FEM
             massMatrix = 1 / (grid.Elements[ielem].Sigma) * massMatrix;
             massApproxMatrix = mu * (itime > 0 ? 1.0 / t01 + (itime > 1 ? 1.0 / t02 : 0) : 0) * massApproxMatrix;
 
-            stiffnessMatrix += massMatrix + massApproxMatrix;
+            //stiffnessMatrix += massMatrix + massApproxMatrix;
 
             for (int i = 0; i < Basis.Size; i++)
                 for (int j = 0; j < Basis.Size; j++)
@@ -227,9 +235,16 @@ public class FEM
 
     void AssemblyLocallVector(int ielem, int itime, double t01, double t02, double t12)
     {
+        var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
+        Basis.SetElem(elem);
+
         for (int i = 0; i < Basis.Size; i++)
         {
-            localVector[i] = 0;
+            double fFunc(PointRZ point)
+                => f(point, grid.Time[itime]) * Basis.GetPsi(i, point) * point.R;
+
+            localVector[i] = Integration.Gauss2D(fFunc, elem);
+            //localVector[i] = 0;
         }
 
         Vector qj1 = new(Basis.Size);
@@ -300,7 +315,7 @@ public class FEM
     public int FindElement(PointRZ point)
     {
         int numR, numZ;
-        if (point.R < grid.Nodes[0].R || point.Z > grid.Nodes[0].Z) return -1;
+        if (point.R < grid.Nodes[0].R || point.Z < grid.Nodes[0].Z) return -1;
 
         for (numR = 1; numR < grid.NumR; numR++)
         {
@@ -311,7 +326,7 @@ public class FEM
 
         for (numZ = 1; numZ < grid.NumZ; numZ++)
         {
-            if (point.Z >= grid.Nodes[numZ * grid.NumR].Z) 
+            if (point.Z <= grid.Nodes[numZ * grid.NumR].Z) 
                 return (numZ - 1) * (grid.NumR - 1) + numR - 1;
         }
         return -1;
@@ -436,6 +451,14 @@ public class FEM
             Console.WriteLine($"t = {grid.Time[itime]:E3}:   " +
                 $"rotE_phi = {rotE(receivers[i]):E7};      " +
                 $"-dB/dt = {minusdBdT(receivers[i], itime):E7}");
+    }
+
+    private void PrintSol()
+    {
+        using StreamWriter sw = new StreamWriter("..\\..\\..\\results.txt");
+
+        for (int i = 0; i < layers[1].Length; i++)
+            sw.WriteLine($"{grid.Nodes[i]} {layers[1][i]} {u(grid.Nodes[i], grid.Time[0])}");
     }
 }
 
