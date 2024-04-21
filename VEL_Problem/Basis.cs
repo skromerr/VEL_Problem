@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace VEL_Problem;
 
@@ -62,19 +63,19 @@ public class BilinearBasis : IBasis2D
         {
             VarType.R => number switch
             {
-                0 => -Y(0, point.Z),
-                1 => Y(0, point.Z),
-                2 => -Y(1, point.Z),
-                3 => Y(1, point.Z),
+                0 => -Y(0, point.Z) / hx,
+                1 => Y(0, point.Z) / hx,
+                2 => -Y(1, point.Z) / hx,
+                3 => Y(1, point.Z) / hx,
                 _ => throw new ArgumentOutOfRangeException(nameof(number), number, "Not expected function number!")
             },
 
             VarType.Z => number switch
             {
-                0 => -X(0, point.R),
-                1 => -X(1, point.R),
-                2 => X(0, point.R),
-                3 => X(1, point.R),
+                0 => -X(0, point.R) / hy,
+                1 => -X(1, point.R) / hy,
+                2 => X(0, point.R) / hy,
+                3 => X(1, point.R) / hy,
                 _ => throw new ArgumentOutOfRangeException(nameof(number), number, "Not expected function number!")
             },
             _ => throw new ArgumentOutOfRangeException(nameof(varType), varType, "Not expected var type!")
