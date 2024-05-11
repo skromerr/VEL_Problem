@@ -5,7 +5,7 @@ x, y, Az, u = [], [], [], []
 
 with open("results.txt") as file:
     for line in file:
-        xT, yT, AzT = line.split()
+        xT, yT, exact, AzT, pogr = line.split()
         x.append(float(xT))
         y.append(float(yT))
         Az.append(float(AzT))
