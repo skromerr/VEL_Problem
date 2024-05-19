@@ -1,4 +1,4 @@
-﻿namespace VEL_Problem;
+﻿namespace CED_Problem;
 
 public record struct PointRZ(double R = 0, double Z = 0)
 {

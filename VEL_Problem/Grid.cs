@@ -2,7 +2,7 @@
 using System.Collections.Specialized;
 using System.Drawing;
 
-namespace VEL_Problem;
+namespace CED_Problem;
 
 public class FiniteElement
 {
@@ -15,8 +15,9 @@ public class Grid
 {
     public List<PointRZ> Nodes { get; init; }
     public List<FirstCondition> Boundary { get; init; }
+    public List<SecondCondition> AnomalyBoundary { get; init; }
     public FiniteElement[] Elements { get; init; }
-    public double VELRadius { get => _rPoints is null ? 0.001 : _rPoints[1]; }
+    public double CEDRadius { get => _rPoints is null ? 0.001 : _rPoints[1]; }
     public double r0 { get => _rPoints is null ? 0.001 : _rPoints[0]; }
     public double[] Time { get; init; }
 
@@ -35,6 +36,9 @@ public class Grid
     private double current;
     public double Current { get => current; }
 
+    private Rectangle[] anomalyObjects;
+    private double[] anomalySigmas;
+ 
 
     public Grid(string spaceGridPath, string timeGridPath)
     {
@@ -106,6 +110,22 @@ public class Grid
             {
                 _sigmas[i] = Convert.ToDouble(data[i]);
             }
+
+            data = sr.ReadLine()!.Split(" ").Where(str => str != "").ToArray();
+            var anomalyNum = Convert.ToInt32(data[0]);
+            anomalyObjects = new Rectangle[anomalyNum];
+            anomalySigmas = new double[anomalyNum];
+
+            for (int i = 0; i < anomalyNum; i++)
+            {
+                data = sr.ReadLine()!.Split(" ").Where(str => str != "").ToArray();
+                var r0 = Convert.ToDouble(data[0]);
+                var r1 = Convert.ToDouble(data[1]);
+                var z0 = Convert.ToDouble(data[2]);
+                var z1 = Convert.ToDouble(data[3]);
+                anomalyObjects[i] = new(new(r0, z0), new(r1, z1));
+                anomalySigmas[i] = Convert.ToDouble(data[4]);
+            }
         }
 
         using (StreamReader sr = new(timeGridPath))
@@ -115,11 +135,21 @@ public class Grid
             Time = new double[steps + 1];
             Time[0] = Convert.ToDouble(data[0]);
             Time[^1] = Convert.ToDouble(data[2]);
-            var step = (Time[^1] - Time[0]) / steps;
+            var coef = Convert.ToDouble(data[3]);
+
+            double sumCoef = 0;
 
             for (int i = 1; i < steps; i++)
             {
-                Time[i] = Time[0] + step * i;
+                sumCoef += Math.Pow(coef, i);
+            }
+
+            var step = (Time[^1] - Time[0]) / sumCoef;
+
+            for (int i = 1; i < steps; i++)
+            {
+                Time[i] = Time[i - 1] + step;
+                step *= coef;
             }
         }
 
@@ -198,10 +228,38 @@ public class Grid
                     Elements[elidx].Nodes[2] = (zidx + 1) * rUniq.Length + rIdx;
                     Elements[elidx].Nodes[3] = (zidx + 1) * rUniq.Length + rIdx + 1;
                     Elements[elidx].Sigma = _sigmas[i];
+
+                    // проверяем принадлежонность элемента к аномальным объектам
+                    for (int k = 0; k < anomalyObjects.Length; k++)
+                    {
+                        if (anomalyObjects[i].IsIn(Nodes[Elements[elidx].Nodes[0]]))
+                        {
+                            Elements[elidx].Sigma = anomalySigmas[k];
+                            break;
+                        }
+                        if (anomalyObjects[i].IsIn(Nodes[Elements[elidx].Nodes[3]]))
+                        {
+                            Elements[elidx].Sigma = anomalySigmas[k];
+                            break;
+                        }
+                    }
                     elidx++;
                 }
                 zidx++;
             }
+        }
+
+        AnomalyBoundary = new List<SecondCondition>();
+
+        for (elidx = 1; elidx < Elements.Length - 1; elidx++)
+        {
+            // левая граница аномального объекта
+            if (elidx % (rUniq.Length - 1) != 0 && Elements[elidx].Sigma != Elements[elidx - 1].Sigma)
+                AnomalyBoundary.Add(new(elidx, 3, [Elements[elidx].Nodes[0], Elements[elidx].Nodes[2]]));
+
+            // правая граница аномального объекта
+            if ((elidx + 1) % (rUniq.Length - 1) != 0 && Elements[elidx].Sigma != Elements[elidx + 1].Sigma)
+                AnomalyBoundary.Add(new(elidx, 1, [Elements[elidx].Nodes[1], Elements[elidx].Nodes[3]]));
         }
 
         // указываем узлы с краевые узлы

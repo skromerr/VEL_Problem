@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using static System.Net.Mime.MediaTypeNames;
 
-namespace VEL_Problem;
+namespace CED_Problem;
 
 public class FEM
 {
@@ -19,7 +19,7 @@ public class FEM
     private Matrix massApproxMatrix;
     private Vector[] layers;
     private IBasis2D Basis;
-    (int maxIters, double eps) slaeParametres = (10000, 1e-14);
+    (int maxIters, double eps) slaeParametres = (100000, 1e-14);
     private List<PointRZ> receivers;
     Func<PointRZ, double> SigmaFunc;
 
@@ -239,7 +239,7 @@ public class FEM
             //massMatrix = 1 / (grid.Elements[ielem].Sigma) * massMatrix;
             massApproxMatrix = mu * massApproxMatrix;
 
-            stiffnessMatrix += massMatrix + massMatrixDr + (itime > 0 ? 1.0 / t01 + (itime > nextLayerIter ? 1.0 / t02 : 0) : 0) * massApproxMatrix;
+            stiffnessMatrix += massMatrix /*+ massMatrixDr*/ + (itime > 0 ? 1.0 / t01 + (itime > nextLayerIter ? 1.0 / t02 : 0) : 0) * massApproxMatrix;
             //stiffnessMatrix +=/* massMatrix + */(1.0 / t01 + (itime > 1 ? 1.0 / t02 : 0)) * massApproxMatrix;
 
             for (int i = 0; i < Basis.Size; i++)
@@ -313,7 +313,11 @@ public class FEM
     {
         var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
         Basis.SetElem(elem);
-        SigmaFunc = (point) => grid.Elements[ielem].Sigma / point.R;
+
+        SigmaFunc = (point) =>
+        {
+            return grid.Elements[ielem].Sigma;
+        };
 
         for (int i = 0; i < Basis.Size; i++)
             for (int j = 0; j <= i; j++)
@@ -325,8 +329,6 @@ public class FEM
                 double massFunc(PointRZ point)
                     => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) / point.R / SigmaFunc(point);
 
-                double massDrFunc(PointRZ point)
-                    => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) * Derivative( (point) => 1 / SigmaFunc(point), point, 0);
 
                 double massApproxFunc(PointRZ point)
                     => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) * point.R;
@@ -334,8 +336,6 @@ public class FEM
                 stiffnessMatrix[i, j] = stiffnessMatrix[j, i] = Integration.Gauss2D(stifFunc, elem);
 
                 massMatrix[i, j] = massMatrix[j, i] = Integration.Gauss2D(massFunc, elem);
-
-                massMatrixDr[i, j] = massMatrixDr[j, i] = Integration.Gauss2D(massDrFunc, elem);
 
                 massApproxMatrix[i, j] = massApproxMatrix[j, i] = Integration.Gauss2D(massApproxFunc, elem);
             }

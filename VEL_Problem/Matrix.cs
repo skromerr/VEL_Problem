@@ -1,4 +1,4 @@
-﻿namespace VEL_Problem;
+﻿namespace CED_Problem;
 
 public class Matrix
 {

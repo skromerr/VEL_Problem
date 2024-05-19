@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace VEL_Problem;
+namespace CED_Problem;
 
 public enum VarType { R = 0, Z = 1 }
 

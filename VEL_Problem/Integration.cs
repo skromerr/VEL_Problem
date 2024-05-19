@@ -4,16 +4,43 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VEL_Problem;
+namespace CED_Problem;
 
 public record struct Rectangle(PointRZ BottomLeft, PointRZ TopRight)
 {
     public PointRZ BottomRight => new(TopRight.R, BottomLeft.Z);
     public PointRZ TopLeft => new(BottomLeft.R, TopRight.Z);
+
+    public bool IsIn(PointRZ point)
+    {
+        if (point.R < TopLeft.R) return false;
+        if (point.R > TopRight.R) return false;
+        if (point.Z > TopLeft.Z) return false;
+        if (point.Z < BottomLeft.Z ) return false;
+
+        return true;
+    }
 }
 
 public static class Integration
 {
+
+    public static double Gauss1D(Func<double, double> func, double start, double end)
+    {
+        double result = 0;
+        double h = end - start;
+
+        (double point, double weight)[] q = GaussOrder5Quadrature().ToArray();
+
+        for (int i = 0; i < q.Length; i++)
+        {
+            double newpoint = (h * q[i].point + h) / 2.0 + start;
+            result += q[i].weight * func(newpoint);
+        }
+
+        return result * h / 2.0;
+    }
+
     public static double Gauss2D(Func<PointRZ, double> func, Rectangle area)
     {
         double result = 0;
