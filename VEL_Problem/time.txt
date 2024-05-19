@@ -1,4 +1,4 @@
-﻿0.0 50 1e-4
+﻿0 75 1e-2 1.01
 
 --------------
-timeStart timeSteps timeEnd
+timeStart timeSteps timeEnd timeCoef
