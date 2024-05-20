@@ -395,15 +395,28 @@ public class FEM
         sw.Write($"{grid.Time[itime]:E4}");
         for (int i = 0; i < receivers.Count; i++)
         {
-            var ielem = FindElement(receivers[i]);
-            var Er = - 1 / grid.Elements[ielem].Sigma * Derivative(ValueAtPoint, receivers[i], 1);
-            var Ez = 1 / grid.Elements[ielem].Sigma * (Derivative(ValueAtPoint, receivers[i], 0) + ValueAtPoint(receivers[i]) / receivers[i].R);
-            var AbsE = Math.Sqrt(Er * Er + Ez * Ez);
+            var vecE = GetE(receivers[i]);
+            var AbsE = vecE.Norm();
             sw.Write($" {AbsE:E7}");
         }    
         sw.WriteLine();
 
         sw.Close();
+    }
+
+    private Vector GetE(PointRZ point)
+    {
+        Vector result = new(2);
+
+        var ielem = FindElement(point);
+
+        var Er = -1 / grid.Elements[ielem].Sigma * Derivative(ValueAtPoint, point, 1);
+        var Ez = 1 / grid.Elements[ielem].Sigma * (Derivative(ValueAtPoint, point, 0) + ValueAtPoint(point) / point.R);
+
+        result[0] = Er;
+        result[1] = Ez;
+
+        return result;
     }
 
     public void PrintSolution()
@@ -495,11 +508,11 @@ public class FEM
 
         Vector exact = new Vector(layers[1].Length);
 
-        for (int i = 0; i < layers[1].Length; i++)
-            exact[i] = u(grid.Nodes[i]);
+        //for (int i = 0; i < layers[1].Length; i++)
+        //    exact[i] = u(grid.Nodes[i]);
 
         for (int i = 0; i < layers[1].Length; i++)
-            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {layers[1][i]:E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
+            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {GetE(grid.Nodes[i]):E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
     }
 
     private void PrintLayerResult(int itime)
