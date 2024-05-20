@@ -256,10 +256,6 @@ public class Grid
             // левая граница аномального объекта
             if (elidx % (rUniq.Length - 1) != 0 && Elements[elidx].Sigma != Elements[elidx - 1].Sigma)
                 AnomalyBoundary.Add(new(elidx, 3, [Elements[elidx].Nodes[0], Elements[elidx].Nodes[2]]));
-
-            // правая граница аномального объекта
-            if ((elidx + 1) % (rUniq.Length - 1) != 0 && Elements[elidx].Sigma != Elements[elidx + 1].Sigma)
-                AnomalyBoundary.Add(new(elidx, 1, [Elements[elidx].Nodes[1], Elements[elidx].Nodes[3]]));
         }
 
         // указываем узлы с краевые узлы

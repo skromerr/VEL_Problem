@@ -94,6 +94,13 @@ public class FEM
             PrintValueAtReceivers(itime);
             CheckResult(itime);
             //PrintLayerResult(itime);
+
+            if (itime % 5 == 0)
+            {
+                PrintSol();
+                Console.WriteLine("Нажмите любую кнопку, чтобы продолжить");
+                Console.ReadKey();
+            }
         }
 
         PrintSol();
@@ -512,7 +519,7 @@ public class FEM
         //    exact[i] = u(grid.Nodes[i]);
 
         for (int i = 0; i < layers[1].Length; i++)
-            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {GetE(grid.Nodes[i]):E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
+            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {GetE(grid.Nodes[i]).Norm():E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
     }
 
     private void PrintLayerResult(int itime)
