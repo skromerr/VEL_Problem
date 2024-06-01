@@ -145,6 +145,7 @@ public class Grid
             }
 
             var step = (Time[^1] - Time[0]) / sumCoef;
+            Console.WriteLine(step);
 
             for (int i = 1; i < steps; i++)
             {
@@ -170,6 +171,7 @@ public class Grid
             }
 
             double r_step = (_rPoints[i + 1] - _rPoints[i]) / sumCoef;
+            Console.Write($"r_Step_0 = {r_step}\t");
 
             for (int j = 0; j < _rSteps[i] - 1; j++)
             {
@@ -179,6 +181,7 @@ public class Grid
             }
 
             rUniq[ridx++] = _rPoints[i + 1];
+            Console.WriteLine($"r_Step_last = {r_step}\t");
         }
 
         zUniq[0] = _zPoints[0];
@@ -193,6 +196,7 @@ public class Grid
 
             double z_step = (_zPoints[i + 1] - _zPoints[i]) / sumCoef;
 
+            Console.Write($"z_Step_0 = {z_step}\t");
             for (int j = 0; j < _zSteps[i] - 1; j++)
             {
                 zUniq[zidx] = zUniq[zidx - 1] + z_step;
@@ -201,6 +205,7 @@ public class Grid
             }
 
             zUniq[zidx++] = _zPoints[i + 1];
+            Console.WriteLine($"z_Step_last = {z_step}\t");
         }
 
 
@@ -232,12 +237,12 @@ public class Grid
                     // проверяем принадлежонность элемента к аномальным объектам
                     for (int k = 0; k < anomalyObjects.Length; k++)
                     {
-                        if (anomalyObjects[i].IsIn(Nodes[Elements[elidx].Nodes[0]]))
+                        if (anomalyObjects[k].IsIn(Nodes[Elements[elidx].Nodes[0]]))
                         {
                             Elements[elidx].Sigma = anomalySigmas[k];
                             break;
                         }
-                        if (anomalyObjects[i].IsIn(Nodes[Elements[elidx].Nodes[3]]))
+                        if (anomalyObjects[k].IsIn(Nodes[Elements[elidx].Nodes[3]]))
                         {
                             Elements[elidx].Sigma = anomalySigmas[k];
                             break;
@@ -280,5 +285,7 @@ public class Grid
         {
             Boundary.Add(new FirstCondition(Nodes[i], i, 1));
         }
+
+        Console.WriteLine($"Узлов - {Nodes.Count}");
     }
 }

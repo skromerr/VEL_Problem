@@ -3,7 +3,7 @@ import numpy as np
 
 x, y, Az, u = [], [], [], []
 
-with open("results.txt") as file:
+with open("results27.txt") as file:
     for line in file:
         xT, yT, exact, AzT, pogr = line.split()
         x.append(float(xT))
@@ -17,7 +17,7 @@ with open("results.txt") as file:
 x = list(dict.fromkeys(x))
 y = list(dict.fromkeys(y))
 
-leCEDs = np.linspace(min(Az), max(Az), 8)
+leCEDs = np.linspace(min(Az), max(Az), 100)
 
 
 
@@ -26,6 +26,6 @@ fig, ax = plt.subplots()
 
 X, Y = np.meshgrid(x, y)
 Az = np.reshape(Az, (len(y), len(x)))
-colorBar = plt.contourf(X, Y, Az, leCEDs=100, cmap='jet')
+colorBar = plt.contourf(X, Y, Az, leCEDs, cmap='jet')
 plt.colorbar(colorBar, ax=ax, format='%.0e')
 plt.show()

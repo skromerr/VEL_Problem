@@ -18,14 +18,17 @@ with open("ReceiversResults.txt") as file:
 
 # plot
 
-#plt.plot(t, rec1)
-plt.plot(t, rec2)
-#plt.plot(t, rec3)
+plt.plot(t, rec1); name1 = 'Receiver1'
+plt.plot(t, rec2); name2 = 'Receiver2'
+plt.plot(t, rec3); name3 = 'Receiver3'
 plt.title('Электрическая напряженность')
+#plt.axis([1e-6, 1e-2, 1e-10, 1e-1])
 plt.xlabel('t, с')
+plt.xscale('log')
+
 plt.ylabel('E, В/м', rotation = 0)
 plt.yscale('log')
 plt.grid()
 #plt.xticks(rotation=-90)
-plt.legend(['Receiver'])
+plt.legend([name1, name2, name3])
 plt.show()

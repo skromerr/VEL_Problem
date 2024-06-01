@@ -32,7 +32,7 @@ public class FEM
 
         stiffnessMatrix = new(Basis.Size);
         massMatrix = new(Basis.Size);
-        massMatrixDr = new(Basis.Size);
+        massMatrixDr = new(2);
         massApproxMatrix = new(Basis.Size);
         localVector = new(Basis.Size);
         slae = new Solver(slaeParametres.maxIters, slaeParametres.eps);
@@ -71,6 +71,44 @@ public class FEM
         }
     }
 
+    public void BuildPortrait()
+    {
+        var list = new HashSet<int>[grid.Nodes.Count].Select(_ => new HashSet<int>()).ToList();
+        foreach (var element in grid.Elements)
+        {
+            foreach (var pos in element.Nodes)
+            {
+                foreach (var node in element.Nodes)
+                {
+                    if (pos > node)
+                    {
+                        list[pos].Add(node);
+                    }
+                }
+            }
+        }
+
+        int count = list.Sum(childList => childList.Count);
+
+        globalMatrix = new(grid.Nodes.Count, count);
+        globalVector = new(grid.Nodes.Count);
+
+        globalMatrix.Ig[0] = 0;
+
+        for (int i = 0; i < list.Count; i++)
+            globalMatrix.Ig[i + 1] = globalMatrix.Ig[i] + list[i].Count;
+
+        int k = 0;
+
+        foreach (var childList in list)
+        {
+            foreach (var value in childList.Order())
+            {
+                globalMatrix.Jg[k++] = value;
+            }
+        }
+    }
+
     public void Compute()
     {
         BuildPortrait();
@@ -83,6 +121,7 @@ public class FEM
         {
             AssemblySLAE(itime);
             AccountFirstConditions(0, itime);
+            AccountAnomalyObjects();
 
 
             slae.SetSLAE(globalVector, globalMatrix);
@@ -92,24 +131,24 @@ public class FEM
             Vector.Copy(slae.solution, layers[1]);
 
             PrintValueAtReceivers(itime);
-            CheckResult(itime);
+            //CheckResult(itime);
             //PrintLayerResult(itime);
 
-            if (itime % 5 == 0)
+            if (itime == 1 || itime == 6 || itime == 15 || itime == 27)
             {
-                PrintSol();
-                Console.WriteLine("Нажмите любую кнопку, чтобы продолжить");
-                Console.ReadKey();
+                PrintSol(itime);
+                Console.WriteLine($"На {itime} временном слое t = {grid.Time[itime]}.");
             }
         }
 
-        PrintSol();
+        PrintSol(grid.Time.Length - 1);
     }
 
     public void PrepareStartConditions()
     {
         AssemblySLAE(0);
         AccountFirstConditions(grid.Current);
+        AccountAnomalyObjects();
 
 
         slae.SetSLAE(globalVector, globalMatrix);
@@ -173,41 +212,45 @@ public class FEM
         }
     }
 
-    public void BuildPortrait()
+    private void AccountAnomalyObjects()
     {
-        var list = new HashSet<int>[grid.Nodes.Count].Select(_ => new HashSet<int>()).ToList();
-        foreach (var element in grid.Elements)
+        int[] localNums = [0, 2];
+        foreach (var anomObj in grid.AnomalyBoundary)
         {
-            foreach (var pos in element.Nodes)
-            {
-                foreach (var node in element.Nodes)
+
+            var ielem = anomObj.ElemNumber;
+            var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
+            Basis.SetElem(elem);
+
+            double start = elem.BottomLeft.Z;
+            double end = elem.TopLeft.Z;
+
+            var sigmaSurge = 1 / grid.Elements[ielem - 1].Sigma - 1 / grid.Elements[ielem].Sigma;
+
+            for (int i = 0; i < massMatrixDr.Size; i++)
+                for (int j = 0; j <= i; j++)
                 {
-                    if (pos > node)
-                    {
-                        list[pos].Add(node);
-                    }
+                    var iPsi = localNums[i];
+                    var jPsi = localNums[j];
+
+                    double massFunc(double z)
+                        => Basis.GetPsi(iPsi, new(elem.BottomLeft.R, z)) * Basis.GetPsi(jPsi, new(elem.BottomLeft.R, z));
+
+                    massMatrixDr[i, j] = massMatrixDr[j, i] = -sigmaSurge * Integration.Gauss1D(massFunc, start, end);
+                    
                 }
-            }
-        }
 
-        int count = list.Sum(childList => childList.Count);
+            for (int i = 0; i < massMatrixDr.Size; i++)
+                for (int j = 0; j < massMatrixDr.Size; j++)
+                {
+                    var iPsi = localNums[i];
+                    var jPsi = localNums[j];
 
-        globalMatrix = new(grid.Nodes.Count, count);
-        globalVector = new(grid.Nodes.Count);
+                    AddElement(grid.Elements[ielem].Nodes[iPsi], grid.Elements[ielem].Nodes[jPsi], massMatrixDr[i, j]);
 
-        globalMatrix.Ig[0] = 0;
+                }
 
-        for (int i = 0; i < list.Count; i++)
-            globalMatrix.Ig[i + 1] = globalMatrix.Ig[i] + list[i].Count;
-
-        int k = 0;
-
-        foreach (var childList in list)
-        {
-            foreach (var value in childList.Order())
-            {
-                globalMatrix.Jg[k++] = value;
-            }
+            massMatrixDr.Clear();
         }
     }
 
@@ -509,9 +552,9 @@ public class FEM
                 $"-dB/dt = {minusdBdT(receivers[i], itime):E7}");
     }
 
-    private void PrintSol()
+    private void PrintSol(int itime = 0)
     {
-        using StreamWriter sw = new StreamWriter("..\\..\\..\\results.txt");
+        using StreamWriter sw = new StreamWriter($"..\\..\\..\\results{itime}.txt");
 
         Vector exact = new Vector(layers[1].Length);
 
@@ -519,7 +562,7 @@ public class FEM
         //    exact[i] = u(grid.Nodes[i]);
 
         for (int i = 0; i < layers[1].Length; i++)
-            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {GetE(grid.Nodes[i]).Norm():E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
+            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {Math.Abs(layers[1][i]):E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
     }
 
     private void PrintLayerResult(int itime)
