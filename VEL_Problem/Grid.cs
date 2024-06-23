@@ -139,7 +139,7 @@ public class Grid
 
             double sumCoef = 0;
 
-            for (int i = 1; i < steps; i++)
+            for (int i = 0; i < steps; i++)
             {
                 sumCoef += Math.Pow(coef, i);
             }

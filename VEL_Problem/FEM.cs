@@ -5,9 +5,8 @@ namespace CED_Problem;
 
 public class FEM
 {
-    private const double mu = 4.0 * Math.PI * 1E-07;
-    private const int nextLayerIter = 5;
-    //private const double mu = 1;
+    //private const double mu = 4.0 * Math.PI * 1E-07;
+    private const int nextLayerIter = 2;
     private Grid grid;
     private SparseMatrix globalMatrix;
     private Vector globalVector;
@@ -43,11 +42,17 @@ public class FEM
         receivers = new List<PointRZ>();
     }
 
+
+    // вот тут нужно задавать значение мю, искомую функцию и значение правой части
+
+    private const double mu = 1;
     private double u(PointRZ point, double t = 0)
-        => t * t;
+        => point.Z * point.Z;
 
     private double f(PointRZ point, double t = 0, double sigma = 1, double mu = 1)
-        => t * t / (sigma * point.R * point.R) + (Math.Abs(t - grid.Time[0]) < 1e-10 ? 0 : 1 ) * 2 * t;
+        => -2 / sigma + (point.Z * point.Z) / (sigma * point.R * point.R) + mu * (Math.Abs(t - grid.Time[0]) < 1e-10 ? 0 : 1 ) * 0;
+
+    // ------------------------------------------------------------------------------------------------------
 
     public void SetSlaeParametres(int maxiters, double eps)
     {
@@ -121,7 +126,7 @@ public class FEM
         {
             AssemblySLAE(itime);
             AccountFirstConditions(0, itime);
-            AccountAnomalyObjects();
+            //AccountAnomalyObjects();
 
 
             slae.SetSLAE(globalVector, globalMatrix);
@@ -130,9 +135,9 @@ public class FEM
             Vector.Copy(layers[1], layers[0]);
             Vector.Copy(slae.solution, layers[1]);
 
-            PrintValueAtReceivers(itime);
+            //PrintValueAtReceivers(itime);
             //CheckResult(itime);
-            //PrintLayerResult(itime);
+            PrintLayerResult(itime);
 
             if (itime == 1 || itime == 6 || itime == 15 || itime == 27)
             {
@@ -148,7 +153,7 @@ public class FEM
     {
         AssemblySLAE(0);
         AccountFirstConditions(grid.Current);
-        AccountAnomalyObjects();
+        //AccountAnomalyObjects();
 
 
         slae.SetSLAE(globalVector, globalMatrix);
@@ -163,8 +168,8 @@ public class FEM
         //    layers[1][i] = u(grid.Nodes[i], grid.Time[0]);
         //Vector.Copy(layers[1], layers[0]);
 
-        PrintValueAtReceivers(0, false);
-        //PrintLayerResult(0);
+        //PrintValueAtReceivers(0, false);
+        PrintLayerResult(0);
 
         //for (int i = 0; i < layers[1].Length; i++)
         //    layers[1][i] = u(grid.Nodes[i], grid.Time[1]);
@@ -181,8 +186,8 @@ public class FEM
         foreach (var fc in grid.Boundary)
         {
             globalMatrix.Di[fc.NodeNumber] = 1;
-            var value = fc.Value(fc.Point.R, cur);
-            //var value = u(fc.Point, grid.Time[itime]);
+            //var value = fc.Value(fc.Point.R, cur);
+            var value = u(fc.Point, grid.Time[itime]);
             globalVector[fc.NodeNumber] = value;
             for (int i = globalMatrix.Ig[fc.NodeNumber]; i < globalMatrix.Ig[fc.NodeNumber + 1]; i++)
             {
@@ -307,18 +312,18 @@ public class FEM
 
     void AssemblyLocallVector(int ielem, int itime, double t01, double t02, double t12)
     {
-        //var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
-        //Basis.SetElem(elem);
+        var elem = new Rectangle(grid.Nodes[grid.Elements[ielem].Nodes[0]], grid.Nodes[grid.Elements[ielem].Nodes[3]]);
+        Basis.SetElem(elem);
 
-        //for (int i = 0; i < Basis.Size; i++)
-        //{
-        //    double fFunc(PointRZ point)
-        //        => f(point, grid.Time[itime], grid.Elements[ielem].Sigma, mu) * Basis.GetPsi(i, point) * point.R;
+        for (int i = 0; i < Basis.Size; i++)
+        {
+            double fFunc(PointRZ point)
+                => f(point, grid.Time[itime], grid.Elements[ielem].Sigma, mu) * Basis.GetPsi(i, point) * point.R;
 
-        //    localVector[i] = Integration.Gauss2D(fFunc, elem);
-        //}
+            localVector[i] = Integration.Gauss2D(fFunc, elem);
+        }
 
-        localVector.Fill(0);
+        //localVector.Fill(0);
 
         Vector qj1 = new(Basis.Size);
         Vector qj2 = new(Basis.Size);
@@ -558,11 +563,11 @@ public class FEM
 
         Vector exact = new Vector(layers[1].Length);
 
-        //for (int i = 0; i < layers[1].Length; i++)
-        //    exact[i] = u(grid.Nodes[i]);
+        for (int i = 0; i < layers[1].Length; i++)
+            exact[i] = u(grid.Nodes[i], grid.Time[itime]);
 
         for (int i = 0; i < layers[1].Length; i++)
-            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {Math.Abs(layers[1][i]):E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
+            sw.WriteLine($"{grid.Nodes[i].R:E4}\t {grid.Nodes[i].Z:E4}\t {exact[i]:E7}\t {layers[1][i]:E7}\t {Math.Abs(exact[i] - layers[1][i]):E4}");
     }
 
     private void PrintLayerResult(int itime)
@@ -584,7 +589,7 @@ public class FEM
 
         error = exact - layers[1];
 
-        residual = Math.Sqrt(error * error / error.Length);
+        residual = error.Norm() / exact.Norm();
 
         sw3.Write($"{grid.Time[itime]:E5} ");
         for (int i = 0; i < layers[1].Length; i++)
