@@ -47,10 +47,10 @@ public class FEM
 
     private const double mu = 1;
     private double u(PointRZ point, double t = 0)
-        => point.Z * point.Z;
+        => Math.Sin(point.Z);
 
     private double f(PointRZ point, double t = 0, double sigma = 1, double mu = 1)
-        => -2 / sigma + (point.Z * point.Z) / (sigma * point.R * point.R) + mu * (Math.Abs(t - grid.Time[0]) < 1e-10 ? 0 : 1 ) * 0;
+        => Math.Sin(point.Z) / sigma + mu * (Math.Abs(t - grid.Time[0]) < 1e-10 ? 0 : 1 ) * 0;
 
     // ------------------------------------------------------------------------------------------------------
 
@@ -294,7 +294,7 @@ public class FEM
             //massMatrix = 1 / (grid.Elements[ielem].Sigma) * massMatrix;
             massApproxMatrix = mu * massApproxMatrix;
 
-            stiffnessMatrix += massMatrix /*+ massMatrixDr*/ + (itime > 0 ? 1.0 / t01 + (itime > nextLayerIter ? 1.0 / t02 : 0) : 0) * massApproxMatrix;
+            stiffnessMatrix += /*massMatrix + massMatrixDr + */ (itime > 0 ? 1.0 / t01 + (itime > nextLayerIter ? 1.0 / t02 : 0) : 0) * massApproxMatrix;
             //stiffnessMatrix +=/* massMatrix + */(1.0 / t01 + (itime > 1 ? 1.0 / t02 : 0)) * massApproxMatrix;
 
             for (int i = 0; i < Basis.Size; i++)
@@ -382,7 +382,7 @@ public class FEM
                     Basis.GetDPsi(i, VarType.Z, point) * Basis.GetDPsi(j, VarType.Z, point)) * point.R / SigmaFunc(point);
 
                 double massFunc(PointRZ point)
-                    => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) / point.R / SigmaFunc(point);
+                    => Basis.GetPsi(i, point) * Basis.GetPsi(j, point) * point.R / SigmaFunc(point);
 
 
                 double massApproxFunc(PointRZ point)
